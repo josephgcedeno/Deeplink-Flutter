@@ -10,8 +10,7 @@ Example ingani: coinmodeplayer://?p=cm_pub_xxx&amount=xxx&wallet=xxxx
 ASk lang if naa ka clarifications
 
 ```
-
-adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d '"coinmodeplayer://coinmode.com/?p=cm_pubxxx&amount=xxx&wallet=xxxc"'
+adb shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d '"coinmodeplayer://coinmode.com/?p=cm_pubxxx&amount=300110&wallet=The%20wallet"'
 
 --------------------
 ?arr%5b%5d=123&arr%5b%5d=abc&addr=1%20Nowhere%20Rd&addr=Rand%20City%F0%9F%98%82

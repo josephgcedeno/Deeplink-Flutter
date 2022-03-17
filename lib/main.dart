@@ -1,190 +1,113 @@
-// ignore_for_file: deprecated_member_use, avoid_print
+// ignore_for_file: avoid_print
 
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:uni_links/uni_links.dart';
 
-void main() => runApp(new MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  // This widget is the root of your application.
   @override
-  _MyAppState createState() => new _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // Try running your application with "flutter run". You'll see the
+        // application has a blue toolbar. Then, without quitting the app, try
+        // changing the primarySwatch below to Colors.green and then invoke
+        // "hot reload" (press "r" in the console where you ran "flutter run",
+        // or simply save your changes to "hot reload" in a Flutter IDE).
+        // Notice that the counter didn't reset back to zero; the application
+        // is not restarted.
+        primarySwatch: Colors.blue,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 enum UniLinksType { string, uri }
 
-class _MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
-  String _latestLink = 'Unknown';
-  late Uri _latestUri;
-
+class _MyHomePageState extends State<MyHomePage> {
+  late List<MapEntry<String, List<String>>> urlParams = [];
+  String fullURL = "";
   late StreamSubscription _sub;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-    initPlatformStateForUriUniLinks();
+    initUniLinks();
   }
 
   @override
-  dispose() {
-    if (_sub != null) _sub.cancel();
+  void dispose() {
+    _sub.cancel();
     super.dispose();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-
-  /// An implementation using a [String] link
-  initPlatformStateForStringUniLinks() async {
-    // Attach a listener to the links stream
-    // ignore: deprecated_member_use
-    _sub = getLinksStream().listen((String? link) {
-      if (!mounted) return;
-      setState(() {
-        _latestLink = link ?? 'Unknown';
-        _latestUri = Uri();
-        try {
-          if (link != null) _latestUri = Uri.parse(link);
-          // ignore: empty_catches
-        } on FormatException {}
-      });
-    }, onError: (err) {
-      if (!mounted) return;
-      setState(() {
-        _latestLink = 'Failed to get latest link: $err.';
-        _latestUri = Uri();
-      });
-    });
-
-    // Attach a second listener to the stream
-    getLinksStream().listen((String? link) {
-      // ignore: avoid_print
-      print('got link: $link');
-    }, onError: (err) {
-      print('got err: $err');
-    });
-
-    // Get the latest link
-    String initialLink;
-    Uri initialUri;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      initialLink = await getInitialLink().toString();
-      if (initialLink != null) initialUri = Uri.parse(initialLink);
-    } on PlatformException {
-      initialLink = 'Failed to get initial link.';
-      initialUri = Uri();
-    } on FormatException {
-      initialLink = 'Failed to parse the initial link as Uri.';
-      initialUri = Uri();
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _latestLink = initialLink;
-      _latestUri = Uri.parse(initialLink); // initialUri;
-    });
-  }
-
-  /// An implementation using the [Uri] convenience helpers
-  initPlatformStateForUriUniLinks() async {
-    // Attach a listener to the Uri links stream
-    _sub = getUriLinksStream().listen((Uri? uri) {
-      if (!mounted) return;
-      setState(() {
-        _latestUri = uri != null ? uri : Uri();
-
-        _latestLink = uri?.toString() ?? 'Unknown';
-      });
-    }, onError: (err) {
-      if (!mounted) return;
-      setState(() {
-        _latestUri = Uri();
-        _latestLink = 'Failed to get latest link: $err.';
-      });
-    });
-
-    // Attach a second listener to the stream
-    getUriLinksStream().listen((Uri? uri) {
-      print('got uri: ${uri?.path} ${uri?.queryParametersAll}');
-    }, onError: (err) {
-      print('got err: $err');
-    });
-
-    // Get the latest Uri
-    Uri initialUri;
-    String initialLink;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      initialUri = await getInitialUri() ?? Uri();
-      print('initial uri: ${initialUri?.path}'
-          ' ${initialUri?.queryParametersAll}');
-      initialLink = initialUri.toString();
-    } on PlatformException {
-      initialUri = Uri();
-      initialLink = 'Failed to get initial uri.';
-    } on FormatException {
-      initialUri = Uri();
-      initialLink = 'Bad parse the initial link as Uri.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _latestUri = initialUri;
-      _latestLink = initialLink;
-    });
+  Future<void> initUniLinks() async {
+    _sub = uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        final paramsValue = uri.queryParametersAll.entries.toList();
+        setState(() {
+          urlParams = paramsValue;
+          fullURL = uri.toString();
+        });
+        print("pumasok");
+      }
+    }, onError: (err) {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final queryParams = _latestUri?.queryParametersAll?.entries?.toList();
-
-    return new MaterialApp(
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text('Plugin example app'),
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Deep link"),
         ),
-        body: new ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(8.0),
-          children: <Widget>[
-            new ListTile(
-              title: const Text('Link'),
-              subtitle: new Text('$_latestLink'),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: <Widget>[
+                Text(fullURL),
+                urlParams.isEmpty
+                    ? Text("Empty params")
+                    : Column(
+                        children: urlParams.map((item) {
+                        return ListTile(
+                          title: Text(item.key),
+                          trailing: Text(item.value[0]),
+                        );
+                      }).toList())
+              ],
             ),
-            new ListTile(
-              title: const Text('Uri Path'),
-              subtitle: new Text('${_latestUri?.path}'),
-            ),
-            new ExpansionTile(
-              initiallyExpanded: true,
-              title: const Text('Query params'),
-              children: queryParams?.map((item) {
-                    return new ListTile(
-                      title: new Text('${item.key}'),
-                      trailing: new Text('${item.value?.join(', ')}'),
-                    );
-                  })?.toList() ??
-                  <Widget>[
-                    new ListTile(
-                      dense: true,
-                      title: const Text('null'),
-                    ),
-                  ],
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
+//uriquiery function.
